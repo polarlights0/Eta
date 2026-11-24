@@ -1,5 +1,13 @@
 # Eta
 
+> **本仓库是 [Mangi-11/Eta](https://github.com/Mangi-11/Eta) 的 fork**，在上游 `main` 基础上叠加了一个功能：
+> **输入框 AI 优化**（在对话输入框工具栏加一个 ✦ 按钮，用当前模型把草稿改写成更有效的提示词，
+> 结果先在输入框上方预览，确认后才写回）。设计与实现见 [docs/INPUT_OPTIMIZE.md](docs/INPUT_OPTIMIZE.md)。
+>
+> - 上游代码整体保留原样，功能改动集中在 1 个 commit。
+> - 同步上游：`git fetch upstream && git merge upstream/main`（详见下方「与上游同步」）。
+> - 许可证沿用上游的 **GPL-3.0**，本 fork 同样以 GPL-3.0 分发。
+
 **简体中文** | [English](README_EN.md)
 
 [![GitHub Stars](https://img.shields.io/github/stars/Mangi-11/Eta?logo=github&label=Stars&color=1677FF)](https://github.com/Mangi-11/Eta/stargazers)
@@ -145,3 +153,24 @@ Copyright © 2026 [蛮吉 (Mangi-11)](https://github.com/Mangi-11)
 本项目基于 GPL-3.0 开源，详情请参阅 [LICENSE](LICENSE)。
 
 <sub>社区：<a href="https://linux.do">LINUX DO</a></sub>
+
+## 与上游同步
+
+本 fork 只新增一个功能，不修改上游任何既有行为，因此上游更新可以几乎无冲突地合入：
+
+```bash
+git remote add upstream https://github.com/Mangi-11/Eta.git   # 只需一次
+git fetch upstream
+git merge upstream/main        # 或 git rebase upstream/main
+./gradlew :app:assembleDebug   # 合完重新编译验证
+```
+
+改动集中在这些位置，若上游在同一处重构，冲突范围也只在这里：
+
+| 类型 | 文件 |
+| --- | --- |
+| 新增（上游没有，不会冲突） | `agent/model/InputOptimizer.kt`、`data/model/InputOptimizeMode.kt`、`ui/model/InputOptimizeUiState.kt`、`ui/components/AgentInputOptimizePanel.kt`、`test/.../InputOptimizerTest.kt`、`docs/INPUT_OPTIMIZE.md` |
+| 修改（可能冲突） | `AgentProvider.kt`（加 1 个枚举值）、`AgentChatUiState.kt`（加 1 个字段）、`AgentUiActions.kt`（加 6 个 action）、`AgentAppState.kt`（加 6 个方法 + 1 个 job 字段）、`AgentChatInputBar.kt`（加 6 个参数 + 1 个按钮 + 1 个面板）、`AgentChatBody.kt` / `AgentHomeScreen.kt` / `AgentAppRoot.kt`（参数与分发透传）、3 份 `strings.xml`（加 20 条文案） |
+
+> 合上游时最常见的冲突形态：`AgentChatInputBar.kt` 的工具栏 `Row` 与参数列表、`AgentAppState.kt` 的动作分发。
+> 处理原则：保留上游的新逻辑，把本 fork 的 6 个 `InputOptimize*` action 与 ✦ 按钮重新挂回去即可。

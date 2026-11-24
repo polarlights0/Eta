@@ -25,6 +25,8 @@ internal data class AgentChatUiState(
     val queuedMessages: List<QueuedMessageUi> = emptyList(),
     val inputSyncVersion: Int = 0,
     val focusInputOnSync: Boolean = true,
+    /** 输入框 AI 优化的瞬态面板状态；不进入消息、上下文与持久化。 */
+    val inputOptimize: InputOptimizeUiState = InputOptimizeUiState(),
     val appliedRuntimeRunIds: List<String> = emptyList(),
     val messageEdit: MessageEditUiState? = null,
     val roleplay: RoleplayBinding? = null,

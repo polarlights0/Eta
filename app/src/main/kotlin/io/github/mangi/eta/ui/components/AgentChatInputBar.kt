@@ -90,6 +90,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import io.github.mangi.eta.R
 import io.github.mangi.eta.data.model.AppearanceUiStyle
+import io.github.mangi.eta.data.model.InputOptimizeMode
 import io.github.mangi.eta.data.model.ReasoningEffort
 import io.github.mangi.eta.data.repository.SpeechSettingsRepository
 import io.github.mangi.eta.ui.app.LocalUiStyle
@@ -100,6 +101,7 @@ import io.github.mangi.eta.ui.components.coui.couiMenuAnchor
 import io.github.mangi.eta.ui.components.coui.rememberCouiMenuAnchor
 import io.github.mangi.eta.ui.markdown.EditorialLineHeightStyle
 import io.github.mangi.eta.ui.model.AgentContextUsageUi
+import io.github.mangi.eta.ui.model.InputOptimizeUiState
 import io.github.mangi.eta.ui.model.PendingFileReferenceUi
 import io.github.mangi.eta.ui.model.PendingImageUi
 import io.github.mangi.eta.ui.model.QueuedMessageUi
@@ -156,6 +158,14 @@ internal fun AgentChatInputBar(
     queuedMessages: List<QueuedMessageUi> = emptyList(),
     inputSyncVersion: Int = 0,
     focusInputOnSync: Boolean = true,
+    /** 输入框上方的 AI 优化面板状态；由 AgentAppState 持有，输入框只负责展示与触发。 */
+    inputOptimize: InputOptimizeUiState = InputOptimizeUiState(),
+    onOptimizeInput: (String, InputOptimizeMode) -> Unit = { _, _ -> },
+    onInputOptimizeApply: () -> Unit = {},
+    onInputOptimizeRetry: () -> Unit = {},
+    onInputOptimizeUndo: () -> Unit = {},
+    onInputOptimizeDismiss: () -> Unit = {},
+    onInputOptimizeModeChange: (InputOptimizeMode) -> Unit = {},
     isEditingMessage: Boolean,
     editHasLaterTurns: Boolean,
     preserveFollowingMessages: Boolean,
@@ -331,6 +341,35 @@ internal fun AgentChatInputBar(
                 color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
                 // 与输入框内正文同一起点（容器 10dp + 文本 8dp）。
                 modifier = Modifier.padding(start = 18.dp, end = 18.dp, bottom = 8.dp),
+            )
+        }
+
+        // 输入优化面板：与排队消息、待发送附件共用输入框上方的同一块悬浮区域，
+        // 展开时从底部推入，不遮挡消息流也不改变输入框自身的位置。
+        AnimatedVisibility(
+            visible = inputOptimize.isVisible,
+            enter = fadeIn(tween(160)) + expandVertically(
+                animationSpec = spring(
+                    dampingRatio = Spring.DampingRatioNoBouncy,
+                    stiffness = Spring.StiffnessMediumLow,
+                ),
+                expandFrom = Alignment.Bottom,
+            ),
+            exit = fadeOut(tween(100)) + shrinkVertically(
+                animationSpec = tween(140),
+                shrinkTowards = Alignment.Bottom,
+            ),
+        ) {
+            AgentInputOptimizeStrip(
+                optimize = inputOptimize,
+                onModeChange = onInputOptimizeModeChange,
+                onApply = onInputOptimizeApply,
+                onRetry = onInputOptimizeRetry,
+                onUndo = onInputOptimizeUndo,
+                onDismiss = onInputOptimizeDismiss,
+                modifier = Modifier.padding(bottom = 8.dp),
+                undoEnabled = inputOptimize.canUndo &&
+                    textFieldState.text.toString() == inputOptimize.result,
             )
         }
 
@@ -514,6 +553,21 @@ internal fun AgentChatInputBar(
                                 onAttachFiles = onAttachFiles,
                                 onAttachFolder = onAttachFolder,
                                 onAttachFilePath = onAttachFilePath,
+                            )
+
+                            Spacer(modifier = Modifier.width(2.dp))
+
+                            // 输入优化入口：紧挨附件按钮，面板展开或运行中保持高亮。
+                            AgentInputOptimizeButton(
+                                manualEnabled = !isEditingMessage &&
+                                    (textFieldState.text.isNotBlank() || inputOptimize.isVisible),
+                                optimize = inputOptimize,
+                                onClick = {
+                                    onOptimizeInput(
+                                        textFieldState.text.toString(),
+                                        inputOptimize.mode,
+                                    )
+                                },
                             )
 
                             Spacer(modifier = Modifier.width(2.dp))

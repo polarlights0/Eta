@@ -1530,4 +1530,25 @@
   <string name="scheduled_notification_gui_ready_title">定时任务就绪：%1$s</string>
   <string name="scheduled_action_run_now">立即试跑</string>
   <string name="scheduled_action_stop">停止运行</string>
+  <string name="input_optimize_title">AI 优化输入</string>
+  <string name="input_optimize_button_description">用 AI 优化输入内容</string>
+  <string name="input_optimize_running">正在优化…</string>
+  <string name="input_optimize_applied">已用优化结果替换输入框</string>
+  <string name="input_optimize_length_delta">%1$d → %2$d 字</string>
+  <string name="input_optimize_action_apply">采用</string>
+  <string name="input_optimize_action_retry">重新生成</string>
+  <string name="input_optimize_action_copy">复制</string>
+  <string name="input_optimize_action_undo">撤销</string>
+  <string name="input_optimize_mode_polish">润色</string>
+  <string name="input_optimize_mode_concise">精简</string>
+  <string name="input_optimize_mode_detail">补全</string>
+  <string name="input_optimize_mode_structure">结构化</string>
+  <string name="input_optimize_error_configuration">请先配置对话模型后再使用输入优化。</string>
+  <string name="input_optimize_error_empty">请先输入需要优化的内容。</string>
+  <string name="input_optimize_error_too_long">输入内容过长，请压缩到 %1$d 字以内再优化。</string>
+  <string name="input_optimize_error_timeout">优化超时，请重试。</string>
+  <string name="input_optimize_error_protocol">模型返回内容不符合预期，请重试。</string>
+  <string name="input_optimize_error_failed">优化失败，请重试。</string>
+  <string name="input_optimize_error_thinking_only">模型只返回了思考过程，请重试或换一个模型。</string>
+  <string name="input_optimize_error_unchanged">模型没有做出任何改动，请重试或换一个模型。</string>
 </resources>

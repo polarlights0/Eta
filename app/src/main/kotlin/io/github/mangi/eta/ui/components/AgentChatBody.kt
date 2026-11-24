@@ -84,6 +84,7 @@ import io.github.mangi.eta.R
 import io.github.mangi.eta.agent.browser.BrowserSessionSnapshot
 import io.github.mangi.eta.agent.imagegen.ImageGenToolCatalog
 import io.github.mangi.eta.data.model.AppearanceUiStyle
+import io.github.mangi.eta.data.model.InputOptimizeMode
 import io.github.mangi.eta.data.model.ReasoningEffort
 import io.github.mangi.eta.data.repository.ConversationBranchBoundary
 import io.github.mangi.eta.ui.app.AgentConversationRevisionReducer
@@ -97,6 +98,7 @@ import io.github.mangi.eta.ui.model.AgentContextUsageUi
 import io.github.mangi.eta.ui.model.AgentMessageUi
 import io.github.mangi.eta.ui.model.AgentModelPickerUiState
 import io.github.mangi.eta.ui.model.ConversationHistoryLoadState
+import io.github.mangi.eta.ui.model.InputOptimizeUiState
 import io.github.mangi.eta.ui.model.MessageEditUiState
 import io.github.mangi.eta.ui.model.PendingFileReferenceUi
 import io.github.mangi.eta.ui.model.PendingImageUi
@@ -159,6 +161,13 @@ internal fun AgentChatBody(
     queuedMessages: List<QueuedMessageUi> = emptyList(),
     inputSyncVersion: Int = 0,
     focusInputOnSync: Boolean = true,
+    inputOptimize: InputOptimizeUiState = InputOptimizeUiState(),
+    onOptimizeInput: (String, InputOptimizeMode) -> Unit = { _, _ -> },
+    onInputOptimizeApply: () -> Unit = {},
+    onInputOptimizeRetry: () -> Unit = {},
+    onInputOptimizeUndo: () -> Unit = {},
+    onInputOptimizeDismiss: () -> Unit = {},
+    onInputOptimizeModeChange: (InputOptimizeMode) -> Unit = {},
     messageEdit: MessageEditUiState?,
     onReasoningEffortChange: (ReasoningEffort) -> Unit,
     onCompactContext: () -> Unit,
@@ -269,6 +278,13 @@ internal fun AgentChatBody(
             queuedMessages = queuedMessages,
             inputSyncVersion = inputSyncVersion,
             focusInputOnSync = focusInputOnSync,
+            inputOptimize = inputOptimize,
+            onOptimizeInput = onOptimizeInput,
+            onInputOptimizeApply = onInputOptimizeApply,
+            onInputOptimizeRetry = onInputOptimizeRetry,
+            onInputOptimizeUndo = onInputOptimizeUndo,
+            onInputOptimizeDismiss = onInputOptimizeDismiss,
+            onInputOptimizeModeChange = onInputOptimizeModeChange,
             messageEdit = messageEdit,
             showEmptySuggestions = !isKeyboardVisible,
             keepBottomAnchored = keepBottomAnchored,
@@ -342,6 +358,13 @@ private fun AgentChatScaffold(
     queuedMessages: List<QueuedMessageUi>,
     inputSyncVersion: Int,
     focusInputOnSync: Boolean,
+    inputOptimize: InputOptimizeUiState,
+    onOptimizeInput: (String, InputOptimizeMode) -> Unit,
+    onInputOptimizeApply: () -> Unit,
+    onInputOptimizeRetry: () -> Unit,
+    onInputOptimizeUndo: () -> Unit,
+    onInputOptimizeDismiss: () -> Unit,
+    onInputOptimizeModeChange: (InputOptimizeMode) -> Unit,
     messageEdit: MessageEditUiState?,
     showEmptySuggestions: Boolean,
     keepBottomAnchored: Boolean,
@@ -408,6 +431,13 @@ private fun AgentChatScaffold(
                 queuedMessages = queuedMessages,
                 inputSyncVersion = inputSyncVersion,
                 focusInputOnSync = focusInputOnSync,
+                inputOptimize = inputOptimize,
+                onOptimizeInput = onOptimizeInput,
+                onInputOptimizeApply = onInputOptimizeApply,
+                onInputOptimizeRetry = onInputOptimizeRetry,
+                onInputOptimizeUndo = onInputOptimizeUndo,
+                onInputOptimizeDismiss = onInputOptimizeDismiss,
+                onInputOptimizeModeChange = onInputOptimizeModeChange,
                 messageEdit = messageEdit,
                 glassBackdrop = chatBackdrop,
                 couiBackdrop = couiChatBackdrop,
@@ -1087,6 +1117,13 @@ private fun AgentChatBottomBar(
     queuedMessages: List<QueuedMessageUi>,
     inputSyncVersion: Int,
     focusInputOnSync: Boolean,
+    inputOptimize: InputOptimizeUiState,
+    onOptimizeInput: (String, InputOptimizeMode) -> Unit,
+    onInputOptimizeApply: () -> Unit,
+    onInputOptimizeRetry: () -> Unit,
+    onInputOptimizeUndo: () -> Unit,
+    onInputOptimizeDismiss: () -> Unit,
+    onInputOptimizeModeChange: (InputOptimizeMode) -> Unit,
     messageEdit: MessageEditUiState?,
     glassBackdrop: Backdrop?,
     couiBackdrop: CouiLayerBackdrop?,
@@ -1149,6 +1186,13 @@ private fun AgentChatBottomBar(
                 queuedMessages = queuedMessages,
                 inputSyncVersion = inputSyncVersion,
                 focusInputOnSync = focusInputOnSync,
+                inputOptimize = inputOptimize,
+                onOptimizeInput = onOptimizeInput,
+                onInputOptimizeApply = onInputOptimizeApply,
+                onInputOptimizeRetry = onInputOptimizeRetry,
+                onInputOptimizeUndo = onInputOptimizeUndo,
+                onInputOptimizeDismiss = onInputOptimizeDismiss,
+                onInputOptimizeModeChange = onInputOptimizeModeChange,
                 isEditingMessage = messageEdit != null,
                 editHasLaterTurns = messageEdit?.hasLaterTurns == true,
                 preserveFollowingMessages = messageEdit?.preserveFollowingMessages == true,

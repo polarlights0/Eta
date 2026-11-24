@@ -1426,4 +1426,25 @@
   <string name="scheduled_notification_gui_ready_title">排程任務就緒：%1$s</string>
   <string name="scheduled_action_run_now">立即試跑</string>
   <string name="scheduled_action_stop">停止執行</string>
+  <string name="input_optimize_title">AI 最佳化輸入</string>
+  <string name="input_optimize_button_description">用 AI 最佳化輸入內容</string>
+  <string name="input_optimize_running">正在最佳化…</string>
+  <string name="input_optimize_applied">已用最佳化結果取代輸入框</string>
+  <string name="input_optimize_length_delta">%1$d → %2$d 字</string>
+  <string name="input_optimize_action_apply">採用</string>
+  <string name="input_optimize_action_retry">重新產生</string>
+  <string name="input_optimize_action_copy">複製</string>
+  <string name="input_optimize_action_undo">復原</string>
+  <string name="input_optimize_mode_polish">潤飾</string>
+  <string name="input_optimize_mode_concise">精簡</string>
+  <string name="input_optimize_mode_detail">補全</string>
+  <string name="input_optimize_mode_structure">結構化</string>
+  <string name="input_optimize_error_configuration">請先設定對話模型後再使用輸入最佳化。</string>
+  <string name="input_optimize_error_empty">請先輸入需要最佳化的內容。</string>
+  <string name="input_optimize_error_too_long">輸入內容過長，請壓縮到 %1$d 字以內再最佳化。</string>
+  <string name="input_optimize_error_timeout">最佳化逾時，請重試。</string>
+  <string name="input_optimize_error_protocol">模型回傳內容不符預期，請重試。</string>
+  <string name="input_optimize_error_failed">最佳化失敗，請重試。</string>
+  <string name="input_optimize_error_thinking_only">模型只回傳了思考過程，請重試或換一個模型。</string>
+  <string name="input_optimize_error_unchanged">模型沒有做出任何改動，請重試或換一個模型。</string>
 </resources>

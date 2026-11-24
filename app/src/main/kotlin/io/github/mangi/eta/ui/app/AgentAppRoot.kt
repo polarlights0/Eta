@@ -444,6 +444,14 @@ fun AgentAppRoot(
                                         is AgentHomeAction.RecallQueuedMessage -> agentState.recallQueuedMessage(action.id, action.currentDraftText)
                                         is AgentHomeAction.RemoveQueuedMessage -> agentState.removeQueuedMessage(action.id)
                                         AgentHomeAction.StopRun -> agentState.stopCurrentRun()
+                                        is AgentHomeAction.OptimizeInput ->
+                                            agentState.optimizeCurrentInput(action.draft, action.mode)
+                                        AgentHomeAction.RetryInputOptimize -> agentState.retryInputOptimize()
+                                        AgentHomeAction.ApplyInputOptimize -> agentState.applyInputOptimize()
+                                        AgentHomeAction.UndoInputOptimize -> agentState.undoInputOptimize()
+                                        AgentHomeAction.DismissInputOptimize -> agentState.dismissInputOptimize()
+                                        is AgentHomeAction.InputOptimizeModeChanged ->
+                                            agentState.changeInputOptimizeMode(action.mode)
                                         is AgentHomeAction.ImageAttached -> agentState.attachImage(action.uri)
                                         is AgentHomeAction.RemoveImage -> agentState.removePendingImage(action.id)
                                         is AgentHomeAction.FilesAttached -> agentState.attachFiles(action.uris)

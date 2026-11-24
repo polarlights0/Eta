@@ -1,5 +1,6 @@
 package io.github.mangi.eta.ui.model
 
+import io.github.mangi.eta.data.model.InputOptimizeMode
 import io.github.mangi.eta.data.model.ReasoningEffort
 
 sealed interface AgentHomeAction {
@@ -10,6 +11,13 @@ sealed interface AgentHomeAction {
     data class ReasoningEffortChanged(val effort: ReasoningEffort) : AgentHomeAction
     data class ModelSelected(val modelId: String) : AgentHomeAction
     data class SubmitMessage(val text: String) : AgentHomeAction
+    /** 用当前输入框草稿发起一次 AI 优化；[draft] 由输入框直接带上，避免为每个字符把草稿提到全局状态。 */
+    data class OptimizeInput(val draft: String, val mode: InputOptimizeMode) : AgentHomeAction
+    data object RetryInputOptimize : AgentHomeAction
+    data object ApplyInputOptimize : AgentHomeAction
+    data object UndoInputOptimize : AgentHomeAction
+    data object DismissInputOptimize : AgentHomeAction
+    data class InputOptimizeModeChanged(val mode: InputOptimizeMode) : AgentHomeAction
     data class InterruptAndSubmitMessage(val text: String) : AgentHomeAction
     data class SteerQueuedMessage(val id: String) : AgentHomeAction
     data class RecallQueuedMessage(val id: String, val currentDraftText: String) : AgentHomeAction

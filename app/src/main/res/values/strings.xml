@@ -1549,4 +1549,25 @@
   <string name="scheduled_notification_gui_ready_title">Ready to run: %1$s</string>
   <string name="scheduled_action_run_now">Run now</string>
   <string name="scheduled_action_stop">Stop</string>
+  <string name="input_optimize_title">AI optimize</string>
+  <string name="input_optimize_button_description">Optimize input with AI</string>
+  <string name="input_optimize_running">Optimizing…</string>
+  <string name="input_optimize_applied">Input replaced with the optimized version</string>
+  <string name="input_optimize_length_delta">%1$d → %2$d characters</string>
+  <string name="input_optimize_action_apply">Use it</string>
+  <string name="input_optimize_action_retry">Regenerate</string>
+  <string name="input_optimize_action_copy">Copy</string>
+  <string name="input_optimize_action_undo">Undo</string>
+  <string name="input_optimize_mode_polish">Polish</string>
+  <string name="input_optimize_mode_concise">Condense</string>
+  <string name="input_optimize_mode_detail">Add detail</string>
+  <string name="input_optimize_mode_structure">Structure</string>
+  <string name="input_optimize_error_configuration">Configure a chat model before using input optimization.</string>
+  <string name="input_optimize_error_empty">Enter some text to optimize first.</string>
+  <string name="input_optimize_error_too_long">Input is too long. Shorten it to %1$d characters or fewer.</string>
+  <string name="input_optimize_error_timeout">Optimization timed out. Try again.</string>
+  <string name="input_optimize_error_protocol">The model returned something unexpected. Try again.</string>
+  <string name="input_optimize_error_failed">Optimization failed. Try again.</string>
+  <string name="input_optimize_error_thinking_only">The model returned only its reasoning. Try again or switch models.</string>
+  <string name="input_optimize_error_unchanged">The model returned the draft unchanged. Try again or switch models.</string>
 </resources>

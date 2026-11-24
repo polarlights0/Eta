@@ -24,6 +24,8 @@ import io.github.mangi.eta.agent.model.AgentFileReferencePolicy
 import io.github.mangi.eta.agent.model.AgentFileReferencePromptCodec
 import io.github.mangi.eta.agent.model.AgentModelClient
 import io.github.mangi.eta.agent.model.ConversationTitleGenerator
+import io.github.mangi.eta.agent.model.InputOptimizeFailure
+import io.github.mangi.eta.agent.model.InputOptimizer
 import io.github.mangi.eta.agent.roleplay.RoleplayBinding
 import io.github.mangi.eta.agent.roleplay.CharacterMacros
 import io.github.mangi.eta.agent.roleplay.CharacterCardCodec
@@ -46,8 +48,10 @@ import io.github.mangi.eta.agent.runtime.AgentUiHandoffPayload
 import io.github.mangi.eta.agent.scheduler.ScheduledTaskRunContext
 import io.github.mangi.eta.data.model.ScheduledTaskSessionMode
 import io.github.mangi.eta.config.Prefs
+import io.github.mangi.eta.core.AppStrings
 import io.github.mangi.eta.core.AndroidAgentLogger
 import io.github.mangi.eta.core.safeLogType
+import io.github.mangi.eta.data.model.InputOptimizeMode
 import io.github.mangi.eta.data.model.ModelReasoningCapabilities
 import io.github.mangi.eta.data.model.ProviderSetting
 import io.github.mangi.eta.data.model.ReasoningEffort
@@ -66,6 +70,8 @@ import io.github.mangi.eta.ui.model.ConversationModeUi
 import io.github.mangi.eta.ui.model.ConversationPaneUiState
 import io.github.mangi.eta.ui.model.ConversationSummaryUi
 import io.github.mangi.eta.ui.model.ConversationHistoryLoadState
+import io.github.mangi.eta.ui.model.InputOptimizePhase
+import io.github.mangi.eta.ui.model.InputOptimizeUiState
 import io.github.mangi.eta.ui.model.MessageEditUiState
 import io.github.mangi.eta.ui.model.PendingFileReferenceUi
 import io.github.mangi.eta.ui.model.PendingImageUi
@@ -105,6 +111,7 @@ internal class AgentAppState(
     private val scope: CoroutineScope,
     initialConversations: AgentConversationStore.Snapshot = AgentConversationStore.load(context),
     private val titleGenerator: ConversationTitleGenerator = ConversationTitleGenerator(),
+    private val inputOptimizer: InputOptimizer = InputOptimizer(),
 ) {
     private val appContext = context.applicationContext
     private val runMessageProjector = AgentRunMessageProjector()
@@ -118,6 +125,8 @@ internal class AgentAppState(
     @Volatile
     private var conversationPersistence = AgentConversationPersistence(initialConversations)
     private var currentReasoningCapabilities: ModelReasoningCapabilities? = null
+    /** 在途的输入优化调用；再次发起、采用、收起或撤销时取消，避免旧结果回写到新面板。 */
+    private var inputOptimizeJob: Job? = null
     private var currentDraftReasoningCustomized = false
     private var localPrefsListener: SharedPreferences.OnSharedPreferenceChangeListener? = null
     private var providers: List<ProviderSetting> = emptyList()
@@ -1507,6 +1516,12 @@ internal class AgentAppState(
         if (prompt.isBlank() && pendingImages.isEmpty() && pendingFileReferences.isEmpty()) {
             return
         }
+        // 消息一旦发出，上一次优化的预览就没有意义：取消在途请求并收起面板。
+        inputOptimizeJob?.cancel()
+        inputOptimizeJob = null
+        if (homeState.inputOptimize.phase != InputOptimizePhase.Idle) {
+            homeState = homeState.copy(inputOptimize = InputOptimizeUiState())
+        }
         if (!homeState.isStreaming) {
             homeState.messageEdit?.takeIf { it.preserveFollowingMessages }?.let { edit ->
                 val updated = RoleplayConversationReducer.edit(homeState, edit.targetMessageId, prompt) ?: return
@@ -1944,6 +1959,146 @@ internal class AgentAppState(
             userHistoryMessage = null, messages = homeState.messages, state = homeState,
             reasoningEffort = homeState.reasoningEffort, operation = AgentRuntimeWire.OP_COMPACT,
         )
+    }
+
+    /**
+     * 用输入框当前草稿发起一次 AI 优化。
+     *
+     * 草稿由输入框直接传入：输入文字只存在输入框本地状态，不逐字提到全局状态。
+     * 结果先落在 [InputOptimizeUiState] 供面板预览，用户点「采用」时才写回输入框，
+     * 因此优化失败或用户放弃都不会丢草稿。
+     */
+    fun optimizeCurrentInput(draft: String, mode: InputOptimizeMode) {
+        val source = draft.trim()
+        inputOptimizeJob?.cancel()
+        inputOptimizeJob = null
+        if (source.isEmpty()) {
+            homeState = homeState.copy(inputOptimize = InputOptimizeUiState(mode = mode))
+            return
+        }
+        val runId = UUID.randomUUID().toString()
+        homeState = homeState.copy(
+            inputOptimize = InputOptimizeUiState(
+                phase = InputOptimizePhase.Running,
+                mode = mode,
+                source = source,
+                runId = runId,
+            ),
+        )
+        if (source.length > InputOptimizer.MAX_DRAFT_CHARS) {
+            updateInputOptimize(runId) { state ->
+                state.copy(
+                    phase = InputOptimizePhase.Failed,
+                    errorMessage = AppStrings.get(
+                        R.string.input_optimize_error_too_long,
+                        "输入内容过长，请压缩到 %1\$d 字以内再优化",
+                        InputOptimizer.MAX_DRAFT_CHARS,
+                    ),
+                )
+            }
+            return
+        }
+        inputOptimizeJob = scope.launch {
+            try {
+                val result = inputOptimizer.optimize(source, mode) { partial ->
+                    // 增量回调来自 Provider 的 IO 线程：回主线程并按 runId 校验，避免覆盖已切换的会话。
+                    scope.launch {
+                        updateInputOptimize(runId) { state -> state.copy(result = partial) }
+                    }
+                }
+                updateInputOptimize(runId) { state ->
+                    state.copy(
+                        phase = InputOptimizePhase.Ready,
+                        result = result,
+                        errorMessage = "",
+                    )
+                }
+            } catch (cancelled: CancellationException) {
+                throw cancelled
+            } catch (failure: InputOptimizeFailure) {
+                updateInputOptimize(runId) { state ->
+                    state.copy(phase = InputOptimizePhase.Failed, errorMessage = failure.userMessage)
+                }
+            } catch (error: Throwable) {
+                AndroidAgentLogger.warn("Input optimize failed: type=${error.safeLogType()}")
+                updateInputOptimize(runId) { state ->
+                    state.copy(
+                        phase = InputOptimizePhase.Failed,
+                        errorMessage = AppStrings.get(
+                            R.string.input_optimize_error_failed,
+                            "优化失败，请重试",
+                        ),
+                    )
+                }
+            }
+        }
+    }
+
+    /** 采用优化结果：写回输入框并保留一次撤销；输入框通过 `inputSyncVersion` 感知外部覆盖。 */
+    fun applyInputOptimize() {
+        val optimize = homeState.inputOptimize
+        if (!optimize.canApply) return
+        inputOptimizeJob?.cancel()
+        inputOptimizeJob = null
+        // 编辑既有消息时输入框承载的是那条消息的正文，不能被优化结果覆盖。
+        if (homeState.messageEdit != null) {
+            homeState = homeState.copy(inputOptimize = InputOptimizeUiState(mode = optimize.mode))
+            return
+        }
+        homeState = homeState.copy(
+            input = optimize.result,
+            inputSyncVersion = homeState.inputSyncVersion + 1,
+            focusInputOnSync = true,
+            inputOptimize = optimize.copy(phase = InputOptimizePhase.Applied),
+        )
+    }
+
+    /** 撤销刚刚应用的优化结果，把原始草稿写回输入框。 */
+    fun undoInputOptimize() {
+        val optimize = homeState.inputOptimize
+        if (!optimize.canUndo) return
+        if (homeState.messageEdit != null) {
+            homeState = homeState.copy(inputOptimize = InputOptimizeUiState(mode = optimize.mode))
+            return
+        }
+        homeState = homeState.copy(
+            input = optimize.source,
+            inputSyncVersion = homeState.inputSyncVersion + 1,
+            focusInputOnSync = true,
+            inputOptimize = InputOptimizeUiState(mode = optimize.mode),
+        )
+    }
+
+    /** 用同一份草稿与模式重跑一次优化。 */
+    fun retryInputOptimize() {
+        val optimize = homeState.inputOptimize
+        if (optimize.source.isBlank()) return
+        optimizeCurrentInput(optimize.source, optimize.mode)
+    }
+
+    /** 收起面板并中止在途调用；输入框内容保持不变。 */
+    fun dismissInputOptimize() {
+        inputOptimizeJob?.cancel()
+        inputOptimizeJob = null
+        if (homeState.inputOptimize.phase == InputOptimizePhase.Idle) return
+        homeState = homeState.copy(
+            inputOptimize = InputOptimizeUiState(mode = homeState.inputOptimize.mode),
+        )
+    }
+
+    fun changeInputOptimizeMode(mode: InputOptimizeMode) {
+        val optimize = homeState.inputOptimize
+        if (optimize.mode == mode) return
+        homeState = homeState.copy(inputOptimize = optimize.copy(mode = mode))
+    }
+
+    private fun updateInputOptimize(
+        runId: String,
+        transform: (InputOptimizeUiState) -> InputOptimizeUiState,
+    ) {
+        val current = homeState.inputOptimize
+        if (current.runId != runId) return
+        homeState = homeState.copy(inputOptimize = transform(current))
     }
 
     private fun launchConversationRun(
