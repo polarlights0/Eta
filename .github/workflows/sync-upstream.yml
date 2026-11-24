@@ -1,0 +1,106 @@
+name: Sync upstream
+
+# 上游 Mangi-11/Eta 有新提交时，自动把 upstream/main 合入本 fork。
+# - 无冲突 → 直接合并并推送（commit 带 [skip ci]，避免顺带触发上游的完整构建）
+# - 有冲突 → 建分支并开 PR，把冲突文件列出来，留给人处理
+#
+# 为什么冲突要人处理：本 fork 与上游在 11 个「接线」文件上有追加式改动
+# （AgentChatInputBar 参数列表、AgentHomeAction sealed 接口等），上游动到同一处就会冲突，
+# 而且 sealed `when` 缺分支这类问题只有编译器能发现。
+#
+# 首次使用：fork 的定时工作流默认不运行，需在 Actions 页面点一次
+# "I understand my workflows, go ahead and enable them"。
+
+on:
+  schedule:
+    # 每天 03:17 UTC = 北京时间 11:17
+    - cron: '17 3 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: sync-upstream
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout fork
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Fetch upstream
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git remote add upstream https://github.com/Mangi-11/Eta.git
+          git fetch upstream main --prune
+
+      - name: Check whether upstream moved
+        id: check
+        run: |
+          if git merge-base --is-ancestor upstream/main HEAD; then
+            echo "needs_sync=false" >> "$GITHUB_OUTPUT"
+            echo "上游没有新提交，跳过。"
+          else
+            COUNT=$(git rev-list --count HEAD..upstream/main)
+            echo "needs_sync=true" >> "$GITHUB_OUTPUT"
+            echo "上游有 $COUNT 个新提交。"
+          fi
+
+      - name: Try merge
+        id: merge
+        if: steps.check.outputs.needs_sync == 'true'
+        run: |
+          # [skip ci] 避免这次推送触发上游 android-release.yml 的 Lint/单测/打包
+          MSG="chore(sync): 合并上游 upstream/main [skip ci]"
+          if git merge upstream/main --no-edit --no-ff -m "$MSG"; then
+            echo "clean=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "clean=false" >> "$GITHUB_OUTPUT"
+            git diff --name-only --diff-filter=U | tee conflicts.txt
+            git merge --abort
+          fi
+
+      - name: Push when clean
+        if: steps.merge.outputs.clean == 'true'
+        run: git push origin HEAD:main
+
+      - name: Open PR when conflicted
+        if: steps.merge.outputs.clean == 'false'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          BRANCH="sync/upstream-$(date +%Y%m%d-%H%M)"
+          git checkout -b "$BRANCH"
+          git commit --allow-empty -m "chore(sync): 上游更新存在冲突，待手工解决 [skip ci]"
+          git push origin "$BRANCH"
+          {
+            echo "自动同步检测到上游 Mangi-11/Eta 有新提交，但合并存在冲突。"
+            echo
+            echo "### 冲突文件"
+            echo
+            sed 's/^/- `/' conflicts.txt | sed 's/$/`/'
+            echo
+            echo "### 处理方式"
+            echo
+            echo "本 fork 与上游都是同位置追加，一般两边都留即可。"
+            echo
+            echo '1. `git fetch upstream && git merge upstream/main`'
+            echo "2. 逐个文件保留双方内容"
+            echo '3. 若报 `'"'"'when'"'"' expression must be exhaustive`，在 `AgentAppRoot.kt` 的动作分发里补上游新增 action 的分支'
+            echo '4. `./gradlew :app:compileDebugKotlin` 与 `--tests "*InputOptimizerTest"` 通过后提交'
+            echo "5. 关闭本 PR"
+            echo
+            echo "参考：\`docs/INPUT_OPTIMIZE.md\`"
+          } > pr-body.md
+          gh pr create --base main --head "$BRANCH" \
+            --title "chore(sync): 上游更新需要手工解决冲突" \
+            --body-file pr-body.md
