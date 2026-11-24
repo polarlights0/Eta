@@ -5,8 +5,7 @@
 > 结果先在输入框上方预览，确认后才写回）。设计与实现见 [docs/INPUT_OPTIMIZE.md](docs/INPUT_OPTIMIZE.md)。
 >
 > - 上游代码整体保留原样，功能改动集中在 1 个 commit。
-> - 同步上游：**已配好自动同步**（`.github/workflows/sync-upstream.yml`，每天检查一次上游；
->   无冲突自动合并推送，有冲突自动开 PR）。手动兜底命令见下方「与上游同步」。
+> - 同步上游：手动 `git fetch upstream && git merge upstream/main`（remote 已配好，详见下方「与上游同步」）。
 > - 许可证沿用上游的 **GPL-3.0**，本 fork 同样以 GPL-3.0 分发。
 
 **简体中文** | [English](README_EN.md)
@@ -157,31 +156,33 @@ Copyright © 2026 [蛮吉 (Mangi-11)](https://github.com/Mangi-11)
 
 ## 与上游同步
 
-### 自动（默认已开启）
+### 手动（当前方式）
 
-`.github/workflows/sync-upstream.yml` 每天 03:17 UTC（北京时间 11:17）检查一次上游：
-
-| 情况 | 行为 |
-| --- | --- |
-| 上游没动 | 直接跳过 |
-| 上游有新提交且**能干净合并** | 自动 merge 并 push 到 `main`，你什么都不用做 |
-| 上游有新提交但**有冲突** | 自动建 `sync/upstream-<时间>` 分支并开 PR，冲突文件列在 PR 里，等你手工解决 |
-| 想立刻同步 | Actions 页面 → Sync upstream → Run workflow |
-
-> fork 首次需要在 Actions 页面点一次 "I understand my workflows, go ahead and enable them"，
-> 或执行 `gh api -X PUT repos/OWNER/Eta/actions/permissions -F enabled=true`。
-
-### 手动（自动流程开 PR 后，或想自己控制时）
-
-本 fork 只新增一个功能，不修改上游任何既有行为，因此上游更新可以几乎无冲突地合入：
+`upstream` remote 已配好，上游发新版后执行：
 
 ```bash
-git remote add upstream https://github.com/Mangi-11/Eta.git   # 只需一次
 git fetch upstream
-git merge upstream/main        # 或 git rebase upstream/main
-./gradlew :app:assembleDebug   # 合完重新编译验证
+git merge upstream/main        # 或 git rebase upstream/main 保持线性历史
+./gradlew :app:assembleDebug   # 合完必须重新编译验证
+./gradlew :app:testDebugUnitTest --tests "*InputOptimizerTest"
 ```
 
+合完如果只改了前端文案或无关模块，也可以只跑第一条编译确认。
+
+### 可选：在 GitHub 上做自动同步
+
+仓库里没有内置定时同步工作流——GitHub 要求 push 涉及 `.github/workflows/` 的文件时，token 必须具备
+`workflow` scope，而本 fork 是用 OAuth App token 推的，没有该 scope。如果想让 GitHub 每天自动检查上游，
+可以任选其一：
+
+1. **网页端加**：在 GitHub 网页上直接新建 `.github/workflows/sync-upstream.yml`（网页操作不受 token scope 限制）。
+2. **网页端建 PAT**：生成一个带 `workflow` + `repo` scope 的 Personal Access Token，
+   `git push` 时用它认证即可。
+3. **不改仓库**：直接在 Actions 里用 `workflow_dispatch` 触发器跑你习惯的脚本。
+
+### 预期冲突范围
+
+本 fork 只新增一个功能，不修改上游任何既有行为，因此上游更新可以几乎无冲突地合入。
 改动集中在这些位置，若上游在同一处重构，冲突范围也只在这里：
 
 | 类型 | 文件 |
