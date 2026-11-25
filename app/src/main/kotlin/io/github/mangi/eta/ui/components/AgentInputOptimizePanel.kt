@@ -29,6 +29,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import io.github.mangi.eta.R
+import io.github.mangi.eta.ui.components.chat.ChatInputActionIconSize
+import io.github.mangi.eta.ui.components.chat.ChatInputActionSize
 import io.github.mangi.eta.data.model.InputOptimizeMode
 import io.github.mangi.eta.ui.model.InputOptimizePhase
 import io.github.mangi.eta.ui.model.InputOptimizeUiState
@@ -171,7 +173,7 @@ internal fun AgentInputOptimizeStrip(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 InputOptimizeMode.ALL.forEach { mode ->
-                    EtaChoiceChip(
+                    ChoiceChip(
                         text = stringResource(mode.labelRes()),
                         selected = optimize.mode == mode,
                         enabled = !optimize.isRunning,

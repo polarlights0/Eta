@@ -1,6 +1,14 @@
 package io.github.mangi.eta.agent.model
 
 import io.github.mangi.eta.R
+import io.github.mangi.eta.agent.model.provider.AgentModelClient
+import io.github.mangi.eta.agent.model.provider.AgentProviderClient
+import io.github.mangi.eta.agent.model.provider.AssistantBlockKind
+import io.github.mangi.eta.agent.model.provider.AssistantStopReason
+import io.github.mangi.eta.agent.model.provider.ProviderClientFactory
+import io.github.mangi.eta.agent.model.provider.ProviderEvent
+import io.github.mangi.eta.agent.model.provider.ProviderRequest
+import io.github.mangi.eta.agent.model.provider.ProviderRequestPurpose
 import io.github.mangi.eta.agent.runtime.AgentRunController
 import io.github.mangi.eta.core.AppStrings
 import io.github.mangi.eta.data.model.InputOptimizeMode

@@ -1,5 +1,9 @@
 package io.github.mangi.eta.agent.model
 
+import io.github.mangi.eta.agent.model.provider.AgentModelClient
+import io.github.mangi.eta.agent.model.provider.ProviderRequestPurpose
+import io.github.mangi.eta.agent.model.provider.openai.OpenAiChatCompletionsProvider
+import io.github.mangi.eta.agent.model.provider.openai.ResponsesRequestBuilder
 import io.github.mangi.eta.data.model.InputOptimizeMode
 import io.github.mangi.eta.data.model.ModelReasoningCapabilities
 import io.github.mangi.eta.data.model.ReasoningEffort
