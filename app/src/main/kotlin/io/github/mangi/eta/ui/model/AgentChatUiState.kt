@@ -63,6 +63,12 @@ data class UserMessageUi(
 ) : AgentChatMessageUi
 
 @Immutable
+data class MessageSourceUi(
+    val url: String,
+    val title: String = "",
+)
+
+@Immutable
 data class AgentMessageUi(
     override val id: String,
     val content: String,
@@ -72,8 +78,7 @@ data class AgentMessageUi(
     val characterEditable: Boolean = false,
     val candidateCount: Int = 1,
     val selectedCandidate: Int = 0,
-    /** 仅当前内存会话展示，不进入消息存储、归档与导出。 */
-    val searchSuggestionsHtml: List<String> = emptyList(),
+    val sources: List<MessageSourceUi> = emptyList(),
 ) : AgentChatMessageUi
 
 enum class SystemNoticeCode(val wireValue: String) {
